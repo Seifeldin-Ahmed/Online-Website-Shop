@@ -1,4 +1,6 @@
 const path = require('path');
+const fs = require('fs');
+
 const mongoose = require('mongoose');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -8,6 +10,12 @@ const csrf = require('csurf');
 const flash = require('connect-flash');
 const multer = require('multer');
 
+/*********************************************** For Deployment *****************************************/
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan'); //this package that makes logging request data really simple
+/*********************************************************************************************************/
+
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
 const authRoutes = require('./routes/auth');
@@ -16,7 +24,7 @@ const errorController = require('./controllers/error');
 const User = require('./models/user');
 
 
-const MONGODB_URL = 'mongodb+srv://SeifAhmed:seif9517535@cluster0.agaemyt.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URL = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.agaemyt.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}?retryWrites=true&w=majority&appName=Cluster0`;
 const app = express();
 const store = new MongoDBStore({
     uri: MONGODB_URL, // the url of the database i will connect the session to
@@ -42,6 +50,17 @@ const fileFilter = (req, file, cb) => {
 
 app.set('view engine','ejs');
 app.set('views','views');
+
+/*********************************************** For Deployment *****************************************/
+const accessLogStream = fs.createWriteStream(
+    path.join(__dirname, 'access.log'),
+    {flags: 'a'}
+);
+app.use(helmet()); //this will set the extra headers for the response for security purpose
+app.use(compression()); 
+app.use(morgan('combined', {stream: accessLogStream})); 
+/*********************************************************************************************************/
+
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(multer({storage:fileStorage, fileFilter: fileFilter}).single('image'));
